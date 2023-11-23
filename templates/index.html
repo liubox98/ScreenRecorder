@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Screen Recorder</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: linear-gradient(to right, #3498db, #2ecc71);
+            /* Set your desired gradient colors */
+        }
+
+        #recordingContainer {
+            position: relative;
+            width: 700px;
+            height: 320px;
+            background-color: white;
+            border: 2px solid #333;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 20px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            /* Added a subtle box shadow */
+        }
+
+        .recordingImage {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            cursor: pointer;
+        }
+
+        #recordingInProgressImage {
+            display: none;
+        }
+
+        .recordedVideo {
+            width: 100%;
+            height: 100%;
+            display: none;
+        }
+
+        #recordedVideo {
+            outline: 2px solid #3498db;
+            /* Added an outline to the video player */
+        }
+
+        #app {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        #app button {
+            font-size: 16px;
+            padding: 10px 20px;
+            margin: 10px;
+            cursor: pointer;
+            background-color: #3498db;
+            /* Set button background color */
+            color: white;
+            /* Set button text color */
+            border: none;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+            /* Added a smooth transition effect */
+        }
+
+        #app button:hover {
+            background-color: #2980b9;
+            /* Darker color on hover */
+        }
+    </style>
+</head>
+
+<body>
+    <div id="recordingContainer">
+        <img id="recordingImage" class="recordingImage" src="http://10.10.25.66/resource/start_recording.jpg"
+            alt="Recording" onclick="toggleRecording()">
+        <img id="recordingInProgressImage" class="recordingImage" src="http://10.10.25.66/resource/recording.jpg"
+            alt="Recording In Progress">
+        <video id="recordedVideo" class="recordedVideo" controls></video>
+    </div>
+    <script>
+        let mediaRecorder;
+        let recordedChunks = [];
+        let isRecording = false;
+        let mediaStream;
+
+        const recordingContainer = document.getElementById('recordingContainer');
+        const recordingImage = document.getElementById('recordingImage');
+        const recordingInProgressImage = document.getElementById('recordingInProgressImage');
+        const recordedVideo = document.getElementById('recordedVideo');
+
+        document.addEventListener('click', handleClick);
+
+        async function handleClick(event) {
+            if (!isRecording) {
+                recordingImage.style.display = 'none';
+                recordingInProgressImage.style.display = 'block';
+                const constraints = {
+                    video: {
+                        width: { ideal: 1920 },
+                        height: { ideal: 1080 },
+                        frameRate: { ideal: 30 },
+                        // add more constraints as needed
+                    },
+                };
+
+                try {
+                    const stream = await navigator.mediaDevices.getDisplayMedia(constraints);
+                    mediaStream = stream;
+                    mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm; codecs=vp9' });
+
+                    mediaRecorder.ondataavailable = event => {
+                        if (event.data.size > 0) {
+                            recordedChunks.push(event.data);
+                        }
+                    };
+
+                    mediaRecorder.onstop = () => {
+                        recordingInProgressImage.style.display = 'none';
+                        recordedVideo.style.display = 'block';
+                        const recordedBlob = new Blob(recordedChunks, { type: 'video/webm' });
+                        const recordedUrl = URL.createObjectURL(recordedBlob);
+                        recordedVideo.src = recordedUrl;
+
+                        // Reset MediaRecorder and stop the stream
+                        mediaRecorder = null;
+                        recordedChunks = [];
+                        if (mediaStream) {
+                            mediaStream.getTracks().forEach(track => track.stop());
+                        }
+                    };
+
+                    mediaRecorder.start();
+                    isRecording = true;
+                } catch (error) {
+                    console.error('Error accessing media devices:', error);
+                }
+            }
+        }
+    </script>
+</body>
+
+</html>
